@@ -1,0 +1,12 @@
+===================================================================
+ONE CLIC MASTER (By BR1) - VERSIONE 2.0 (UI MODERNA ONE-CLICK)
+===================================================================
+
+Novita della v2.0:
+- Design ultra-moderno e minimalista su sfondo radiale #111217.
+- Controlli ridotti all'essenziale per un vero master con 1 clic:
+  1) Scegli lo stile dal menu Preset in alto
+  2) Clicca il grande pulsante circolare centrale per attivare
+     e calibrare istantaneamente il master sull'intera traccia.
+- Rimossi slider superflui e testi tecnici in basso, sostituiti da
+  un alone reattivo al suono e da una barra segnale minimalista.
