@@ -112,108 +112,23 @@ jobs:
           name: OneClicMaster-Windows-VST3
           path: build/OneClicMaster_artefacts/Release/VST3/
 
-  build-macos-vst3-au:
-    runs-on: macos-14
+ build-macos-vst3-au:
+    runs-on: macos-13
     steps:
       - uses: actions/checkout@v4
 
-      - name: Prepara Struttura e CMakeLists
-        shell: python3 {0}
+      - name: Estrai eventuale ZIP e compila VST3 + AU
+        shell: bash
         run: |
-          import os, glob, shutil, zipfile, struct, zlib
-
-          for z in glob.glob("**/*.zip", recursive=True):
-              with zipfile.ZipFile(z, 'r') as zf:
-                  zf.extractall(".")
-
-          os.makedirs("Source", exist_ok=True)
-          os.makedirs("Assets", exist_ok=True)
-
-          for fname in ["PluginProcessor.h", "PluginProcessor.cpp", "PluginEditor.h", "PluginEditor.cpp"]:
-              matches = [m for m in glob.glob(f"**/{fname}", recursive=True) if os.path.abspath(m) != os.path.abspath(os.path.join("Source", fname))]
-              if matches and not os.path.exists(os.path.join("Source", fname)):
-                  shutil.copy2(matches[0], os.path.join("Source", fname))
-
-          logos = [m for m in glob.glob("**/logo.png", recursive=True) if os.path.abspath(m) != os.path.abspath(os.path.join("Assets", "logo.png"))]
-          if logos and not os.path.exists("Assets/logo.png"):
-              shutil.copy2(logos[0], "Assets/logo.png")
-          elif not os.path.exists("Assets/logo.png"):
-              def make_png(w, h):
-                  raw = b"".join(b"\x00" + b"\x11\x12\x17\xff" * w for _ in range(h))
-                  def chunk(t, d):
-                      return struct.pack(">I", len(d)) + t + d + struct.pack(">I", zlib.crc32(t + d) & 0xffffffff)
-                  return b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 6, 0, 0, 0)) + chunk(b"IDAT", zlib.compress(raw)) + chunk(b"IEND", b"")
-              with open("Assets/logo.png", "wb") as f:
-                  f.write(make_png(64, 64))
-
-          cmake_code = """cmake_minimum_required(VERSION 3.22)
-          project(OneClicMaster VERSION 1.1.0)
-          set(CMAKE_CXX_STANDARD 17)
-          set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-          include(FetchContent)
-          FetchContent_Declare(
-              JUCE
-              GIT_REPOSITORY https://github.com/juce-framework/JUCE.git
-              GIT_TAG        7.0.12
-          )
-          FetchContent_MakeAvailable(JUCE)
-
-          juce_add_plugin(OneClicMaster
-              COMPANY_NAME "BR1"
-              IS_SYNTH FALSE
-              NEEDS_MIDI_INPUT FALSE
-              NEEDS_MIDI_OUTPUT FALSE
-              IS_MIDI_EFFECT FALSE
-              EDITOR_WANTS_KEYBOARD_FOCUS FALSE
-              COPY_PLUGIN_AFTER_BUILD FALSE
-              PLUGIN_MANUFACTURER_CODE Br1a
-              PLUGIN_CODE Ocm1
-              FORMATS VST3 AU
-              VST3_CATEGORIES Fx Mastering
-              AU_MAIN_TYPE kAudioUnitType_Effect
-              PRODUCT_NAME "OneClicMaster"
-          )
-
-          juce_add_binary_data(OneClicMasterAssets
-              SOURCES
-                  Assets/logo.png
-          )
-
-          target_sources(OneClicMaster
-              PRIVATE
-                  Source/PluginProcessor.cpp
-                  Source/PluginProcessor.h
-                  Source/PluginEditor.cpp
-                  Source/PluginEditor.h
-          )
-
-          target_compile_definitions(OneClicMaster
-              PUBLIC
-                  JUCE_WEB_BROWSER=0
-                  JUCE_USE_CURL=0
-                  JUCE_VST3_CAN_REPLACE_VST2=0
-          )
-
-          target_link_libraries(OneClicMaster
-              PRIVATE
-                  OneClicMasterAssets
-                  juce::juce_audio_utils
-                  juce::juce_dsp
-              PUBLIC
-                  juce::juce_recommended_config_flags
-          )
-
-          juce_generate_juce_header(OneClicMaster)
-          """
-          with open("CMakeLists.txt", "w", encoding="utf-8") as f:
-              f.write(cmake_code)
-
-      - name: Compila VST3 e AU per macOS
-        run: |
+          for z in *.zip; do
+            [ -f "$z" ] && unzip -o "$z"
+          done
+          if [ -d "OneClicMaster/Source" ] && [ ! -d "Source" ]; then
+            cp -R OneClicMaster/* .
+          fi
           cmake -B build -DCMAKE_BUILD_TYPE=Release
           cmake --build build --config Release --target OneClicMaster_VST3
-          cmake --build build --config Release --target OneClicMaster_AU || true
+          cmake --build build --config Release --target OneClicMaster_AU
 
       - name: Carica Plugin macOS (VST3 e Logic Pro AU)
         uses: actions/upload-artifact@v4
